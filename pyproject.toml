@@ -2,7 +2,8 @@
 name = "appcore-key-provider"
 version = "0.1.0"
 description = "Key provider abstractions and implementations for appcore."
-authors = ["OpenAI Codex <codex@example.com>"]
+authors = ["ZSU"]
+license = "MIT"
 packages = [{ include = "appcore", from = "src" }]
 
 [tool.poetry.dependencies]
@@ -10,8 +11,8 @@ python = "^3.12"
 keyring = { version = "^25.0", optional = true }
 azure-keyvault-secrets = { version = "^4.8", optional = true }
 azure-identity = { version = "^1.16", optional = true }
-appcore-common = { path = "../appcore-common", develop = true }
-appcore-config = { path = "../appcore-config", develop = true }
+appcore-common = "^0.1.0"
+appcore-config = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.4"

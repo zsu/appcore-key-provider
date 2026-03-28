@@ -1,0 +1,45 @@
+[tool.poetry]
+name = "appcore-key-provider"
+version = "0.1.0"
+description = "Key provider abstractions and implementations for appcore."
+authors = ["OpenAI Codex <codex@example.com>"]
+packages = [{ include = "appcore", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+keyring = { version = "^25.0", optional = true }
+azure-keyvault-secrets = { version = "^4.8", optional = true }
+azure-identity = { version = "^1.16", optional = true }
+appcore-common = { path = "../appcore-common", develop = true }
+appcore-config = { path = "../appcore-config", develop = true }
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.4"
+mypy = "^1.10"
+pytest = "^8.2"
+pytest-cov = "^5.0"
+pylint = "^3.3"
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.extras]
+keyring-provider = ["keyring"]
+azure-provider = ["azure-keyvault-secrets", "azure-identity"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "D"]
+ignore = ["D203", "D212"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["appcore"]

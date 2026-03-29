@@ -91,11 +91,12 @@ from appcore.config import SecretEnvVarSettings, SecretSourceSettings
 settings = SecretSourceSettings(
     provider="env_var",
     env_var=SecretEnvVarSettings(
-        base_var_name="APP_SECRETS_BASE",
-        override_var_name="APP_SECRETS_DEV",
+        key_name="APP_SECRETS",
     ),
 )
 ```
+
+In this model, `APP_SECRETS` contains one encrypted blob for the active environment.
 
 Keyring example:
 
@@ -106,11 +107,12 @@ settings = SecretSourceSettings(
     provider="keyring",
     keyring=SecretKeyringSettings(
         service_name="customer_support_ops",
-        base_key_name="app-secrets-base",
-        override_key_name="app-secrets-dev",
+        key_name="app-secrets",
     ),
 )
 ```
+
+In this model, the single keyring entry contains the full encrypted blob for the active environment.
 
 Azure Key Vault example:
 
@@ -121,11 +123,12 @@ settings = SecretSourceSettings(
     provider="azure_key_vault",
     azure_key_vault=SecretAzureKeyVaultSettings(
         vault_url="https://example.vault.azure.net/",
-        base_secret_name="app-secrets-base",
-        override_secret_name="app-secrets-dev",
+        key_name="app-secrets",
     ),
 )
 ```
+
+In this model, the single vault secret contains the full encrypted blob for the active environment.
 
 ## Optional extras
 

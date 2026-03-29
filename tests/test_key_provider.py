@@ -175,9 +175,8 @@ def test_env_secret_blob_provider_reads_configured_variables(
     monkeypatch: pytest.MonkeyPatch,
     workspace_dir: Path,
 ) -> None:
-    """Environment secret blob provider reads configured base and override variables."""
-    monkeypatch.setenv("APP_SECRETS_BASE", "base-secret")
-    monkeypatch.setenv("APP_SECRETS_DEV", "override-secret")
+    """Environment secret blob provider reads one configured active-environment blob."""
+    monkeypatch.setenv("APP_SECRETS", "active-secret")
 
     provider = SecretBlobProviderFactory.create(
         SecretSourceSettings(provider="env_var"),
@@ -186,19 +185,18 @@ def test_env_secret_blob_provider_reads_configured_variables(
     )
 
     assert isinstance(provider, EnvVarSecretBlobProvider)
-    assert provider.get_base_blob() == "base-secret"
-    assert provider.get_override_blob() == "override-secret"
+    assert provider.get_base_blob() == "active-secret"
+    assert provider.get_override_blob() is None
 
 
 def test_keyring_secret_blob_provider_reads_keyring(
     monkeypatch: pytest.MonkeyPatch,
     workspace_dir: Path,
 ) -> None:
-    """Keyring secret blob provider reads configured base and override entries."""
+    """Keyring secret blob provider reads one configured active-environment entry."""
     module = types.SimpleNamespace(
         get_password=lambda service, key: {
-            "app-secrets-base": "base-secret",
-            "app-secrets-dev": "override-secret",
+            "app-secrets": "active-secret",
         }.get(key)
     )
     monkeypatch.setitem(sys.modules, "keyring", module)
@@ -210,15 +208,15 @@ def test_keyring_secret_blob_provider_reads_keyring(
     )
 
     assert isinstance(provider, KeyringSecretBlobProvider)
-    assert provider.get_base_blob() == "base-secret"
-    assert provider.get_override_blob() == "override-secret"
+    assert provider.get_base_blob() == "active-secret"
+    assert provider.get_override_blob() is None
 
 
 def test_azure_secret_blob_provider_reads_secret_names(
     monkeypatch: pytest.MonkeyPatch,
     workspace_dir: Path,
 ) -> None:
-    """Azure secret blob provider reads base and override blob secrets."""
+    """Azure secret blob provider reads one configured active-environment blob secret."""
 
     class FakeCredential:
         """Stand-in for DefaultAzureCredential."""
@@ -241,8 +239,7 @@ def test_azure_secret_blob_provider_reads_secret_names(
         def get_secret(self, secret_name: str) -> FakeSecret:
             """Return a fake blob secret."""
             secrets = {
-                "app-secrets-base": "base-secret",
-                "app-secrets-dev": "override-secret",
+                "app-secrets": "active-secret",
             }
             return FakeSecret(secrets[secret_name])
 
@@ -263,5 +260,5 @@ def test_azure_secret_blob_provider_reads_secret_names(
     )
 
     assert isinstance(provider, AzureKeyVaultSecretBlobProvider)
-    assert provider.get_base_blob() == "base-secret"
-    assert provider.get_override_blob() == "override-secret"
+    assert provider.get_base_blob() == "active-secret"
+    assert provider.get_override_blob() is None

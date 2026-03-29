@@ -53,30 +53,25 @@ class FileSecretBlobProvider:
 class EnvVarSecretBlobProvider:
     """Retrieve secret blobs from environment variables."""
 
-    def __init__(self, base_var_name: str, override_var_name: str | None) -> None:
-        """Store environment variable names for blob loading."""
-        self._base_var_name = base_var_name
-        self._override_var_name = override_var_name
+    def __init__(self, key_name: str) -> None:
+        """Store the environment variable name for blob loading."""
+        self._key_name = key_name
 
     def get_base_blob(self) -> str:
-        """Return the required base secret blob from the environment."""
+        """Return the required active-environment secret blob from the environment."""
         import os
 
-        value = os.getenv(self._base_var_name)
+        value = os.getenv(self._key_name)
         if value is None:
             raise common_exceptions.KeyProviderError(
                 "Environment variable "
-                f"{self._base_var_name!r} is not set for the base secret blob"
+                f"{self._key_name!r} is not set for the secret blob"
             )
         return value
 
     def get_override_blob(self) -> str | None:
-        """Return the optional environment-specific override blob from the environment."""
-        import os
-
-        if self._override_var_name is None:
-            return None
-        return os.getenv(self._override_var_name)
+        """Return no override blob for single-key environment providers."""
+        return None
 
 
 class KeyringSecretBlobProvider:
@@ -86,31 +81,27 @@ class KeyringSecretBlobProvider:
         self,
         service_name: str,
         username: str,
-        base_key_name: str,
-        override_key_name: str | None,
+        key_name: str,
     ) -> None:
         """Store keyring identifiers for blob loading."""
         self._service_name = service_name
         self._username = username
-        self._base_key_name = base_key_name
-        self._override_key_name = override_key_name
+        self._key_name = key_name
 
     def get_base_blob(self) -> str:
-        """Return the required base secret blob from keyring."""
-        value = self._get_password(self._base_key_name)
+        """Return the required active-environment secret blob from keyring."""
+        value = self._get_password(self._key_name)
         if value is None:
             raise common_exceptions.KeyProviderError(
                 "Keyring entry "
-                f"{self._base_key_name!r} was not found in service "
+                f"{self._key_name!r} was not found in service "
                 f"{self._service_name!r}"
             )
         return value
 
     def get_override_blob(self) -> str | None:
-        """Return the optional environment-specific override blob from keyring."""
-        if self._override_key_name is None:
-            return None
-        return self._get_password(self._override_key_name)
+        """Return no override blob for single-key keyring providers."""
+        return None
 
     def _get_password(self, key_name: str) -> str | None:
         """Read a secret blob from keyring."""
@@ -125,8 +116,7 @@ class AzureKeyVaultSecretBlobProvider:
     def __init__(
         self,
         vault_url: str,
-        base_secret_name: str,
-        override_secret_name: str | None,
+        key_name: str,
     ) -> None:
         """Create the Azure client and store secret names."""
         from azure.identity import DefaultAzureCredential
@@ -136,22 +126,15 @@ class AzureKeyVaultSecretBlobProvider:
             vault_url=vault_url,
             credential=DefaultAzureCredential(),
         )
-        self._base_secret_name = base_secret_name
-        self._override_secret_name = override_secret_name
+        self._key_name = key_name
 
     def get_base_blob(self) -> str:
-        """Return the required base secret blob from Azure Key Vault."""
-        return self._get_required_secret(self._base_secret_name)
+        """Return the required active-environment secret blob from Azure Key Vault."""
+        return self._get_required_secret(self._key_name)
 
     def get_override_blob(self) -> str | None:
-        """Return the optional environment-specific override blob from Azure Key Vault."""
-        if self._override_secret_name is None:
-            return None
-        try:
-            secret = self._client.get_secret(self._override_secret_name)
-        except Exception:
-            return None
-        return secret.value
+        """Return no override blob for single-key Azure providers."""
+        return None
 
     def _get_required_secret(self, secret_name: str) -> str:
         """Read a required secret blob from Azure Key Vault."""
@@ -188,30 +171,21 @@ class SecretBlobProviderFactory:
             return FileSecretBlobProvider(Path(base_path), Path(override_path))
 
         if settings.provider == "env_var":
-            override_name = (
-                settings.env_var.override_var_name or f"APP_SECRETS_{environment.upper()}"
-            )
-            return EnvVarSecretBlobProvider(settings.env_var.base_var_name, override_name)
+            return EnvVarSecretBlobProvider(settings.env_var.key_name)
 
         if settings.provider == "keyring":
-            override_key_name = settings.keyring.override_key_name or f"app-secrets-{environment}"
             return KeyringSecretBlobProvider(
                 service_name=settings.keyring.service_name,
                 username=settings.keyring.username,
-                base_key_name=settings.keyring.base_key_name,
-                override_key_name=override_key_name,
+                key_name=settings.keyring.key_name,
             )
 
         if settings.provider == "azure_key_vault":
             if settings.azure_key_vault is None:
                 raise ValueError("azure_key_vault settings are required")
-            override_secret_name = (
-                settings.azure_key_vault.override_secret_name or f"app-secrets-{environment}"
-            )
             return AzureKeyVaultSecretBlobProvider(
                 vault_url=settings.azure_key_vault.vault_url,
-                base_secret_name=settings.azure_key_vault.base_secret_name,
-                override_secret_name=override_secret_name,
+                key_name=settings.azure_key_vault.key_name,
             )
 
         raise ValueError(f"Unknown secret blob provider: {settings.provider!r}")

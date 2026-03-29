@@ -247,6 +247,7 @@ $RECYCLE.BIN/
 *.bak
 *.orig
 .tmp/        # <-- added: ignores a folder literally named ".tmp"
+.test-work/
 
 # Celery
 celerybeat-schedule

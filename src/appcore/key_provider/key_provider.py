@@ -111,9 +111,9 @@ class KeyProviderFactory:
     """Create key provider instances from validated security settings."""
 
     @staticmethod
-    def create(settings: settings_models.SecuritySettings) -> KeyProvider:
+    def create(settings: settings_models.MasterKeySettings) -> KeyProvider:
         """Instantiate the configured key provider."""
-        if settings.key_provider == "keyring":
+        if settings.provider == "keyring":
             return LayeredKeyProvider(
                 [
                     EnvVarKeyProvider(settings.env_var.env_var_name),
@@ -123,10 +123,10 @@ class KeyProviderFactory:
                     ),
                 ]
             )
-        if settings.key_provider == "azure_key_vault":
+        if settings.provider == "azure_key_vault":
             if settings.azure_key_vault is None:
                 raise ValueError("azure_key_vault settings are required")
             return AzureKeyVaultProvider(settings.azure_key_vault.vault_url)
-        if settings.key_provider == "env_var":
+        if settings.provider == "env_var":
             return EnvVarKeyProvider(settings.env_var.env_var_name)
-        raise ValueError(f"Unknown key_provider: {settings.key_provider!r}")
+        raise ValueError(f"Unknown key_provider: {settings.provider!r}")

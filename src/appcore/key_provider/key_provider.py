@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 from typing import Protocol, runtime_checkable
 
+from dotenv import load_dotenv
+
 from appcore.common import exceptions as common_exceptions
 from appcore.config import settings_models
 
@@ -74,6 +76,7 @@ class EnvVarKeyProvider:
 
     def get_key(self, key_name: str) -> bytes:
         """Return the configured environment variable value as UTF-8 bytes."""
+        load_dotenv()
         value = os.getenv(self._env_var_name)
         if value is None:
             raise common_exceptions.KeyProviderError(

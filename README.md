@@ -43,8 +43,16 @@ from appcore.key_provider import KeyProviderFactory
 from appcore.config import MasterKeySettings
 
 provider = KeyProviderFactory.create(MasterKeySettings())
-key_bytes = provider.get_key("app-encryption-key")
+key_bytes = provider.get_key()
 ```
+
+Master-key lookup is fully configured under `security.master_key`:
+
+- env var: `env_var_name`
+- keyring: `service_name` + `entry_name`
+- Azure Key Vault: `vault_url` + `secret_name`
+
+`security.crypto.salt` is separate and belongs to the crypto layer, not the provider.
 
 ## Secret blob usage
 
@@ -107,6 +115,7 @@ settings = SecretSourceSettings(
     provider="keyring",
     keyring=SecretKeyringSettings(
         service_name="customer_support_ops",
+        username="app_secrets",
         key_name="app-secrets",
     ),
 )

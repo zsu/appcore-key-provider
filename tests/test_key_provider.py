@@ -43,24 +43,24 @@ def test_k1_keyring_provider_returns_bytes(monkeypatch: pytest.MonkeyPatch) -> N
     """K1: KeyringProvider returns UTF-8 bytes when the key exists."""
     module = types.SimpleNamespace(get_password=lambda service, key: "secret-value")
     monkeypatch.setitem(sys.modules, "keyring", module)
-    provider = KeyringProvider("svc", "user")
-    assert provider.get_key("name") == b"secret-value"
+    provider = KeyringProvider("svc", "entry")
+    assert provider.get_key() == b"secret-value"
 
 
 def test_k2_keyring_provider_raises_when_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     """K2: KeyringProvider raises when the key does not exist."""
     module = types.SimpleNamespace(get_password=lambda service, key: None)
     monkeypatch.setitem(sys.modules, "keyring", module)
-    provider = KeyringProvider("svc", "user")
+    provider = KeyringProvider("svc", "entry")
     with pytest.raises(KeyProviderError):
-        provider.get_key("name")
+        provider.get_key()
 
 
 def test_k3_env_var_provider_returns_encoded_value(monkeypatch: pytest.MonkeyPatch) -> None:
     """K3: EnvVarKeyProvider encodes the configured environment variable."""
     monkeypatch.setenv("APP_KEY", "abc123")
     provider = EnvVarKeyProvider("APP_KEY")
-    assert provider.get_key("ignored") == b"abc123"
+    assert provider.get_key() == b"abc123"
 
 
 def test_k4_env_var_provider_raises_when_unset(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -68,14 +68,14 @@ def test_k4_env_var_provider_raises_when_unset(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.delenv("APP_KEY", raising=False)
     provider = EnvVarKeyProvider("APP_KEY")
     with pytest.raises(KeyProviderError):
-        provider.get_key("ignored")
+        provider.get_key()
 
 
 def test_k5_factory_returns_layered_provider_for_keyring() -> None:
     """K5: Factory resolves the layered env/keyring provider."""
     settings = MasterKeySettings(
         provider="keyring",
-        keyring=KeyringSettings(service_name="svc", username="user"),
+        keyring=KeyringSettings(service_name="svc", entry_name="entry"),
     )
     assert isinstance(KeyProviderFactory.create(settings), LayeredKeyProvider)
 
@@ -117,7 +117,7 @@ def test_k7_azure_key_vault_provider_returns_secret_bytes(
 
         def get_secret(self, key_name: str) -> FakeSecret:
             """Return a fake secret."""
-            assert key_name == "app-key"
+            assert key_name == "app-secret"
             return FakeSecret("from-vault")
 
     azure_identity = types.ModuleType("azure.identity")
@@ -127,12 +127,15 @@ def test_k7_azure_key_vault_provider_returns_secret_bytes(
     monkeypatch.setitem(sys.modules, "azure.identity", azure_identity)
     monkeypatch.setitem(sys.modules, "azure.keyvault.secrets", azure_secrets)
 
-    provider = AzureKeyVaultProvider("https://vault")
-    assert provider.get_key("app-key") == b"from-vault"
+    provider = AzureKeyVaultProvider("https://vault", "app-secret")
+    assert provider.get_key() == b"from-vault"
 
     settings = MasterKeySettings(
         provider="azure_key_vault",
-        azure_key_vault=AzureKeyVaultSettings(vault_url="https://vault"),
+        azure_key_vault=AzureKeyVaultSettings(
+            vault_url="https://vault",
+            secret_name="app-secret",
+        ),
     )
     assert isinstance(KeyProviderFactory.create(settings), AzureKeyVaultProvider)
 
@@ -146,11 +149,28 @@ def test_layered_provider_prefers_keyring_over_env(monkeypatch: pytest.MonkeyPat
     provider = LayeredKeyProvider(
         [
             EnvVarKeyProvider("APP_KEY"),
-            KeyringProvider("svc", "user"),
+            KeyringProvider("svc", "entry"),
         ]
     )
 
-    assert provider.get_key("name") == b"keyring-value"
+    assert provider.get_key() == b"keyring-value"
+
+
+def test_keyring_provider_uses_configured_entry_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keyring lookups use the configured entry name rather than a call-time key."""
+    calls: list[tuple[str, str]] = []
+
+    def get_password(service: str, key: str) -> str:
+        calls.append((service, key))
+        return "secret-value"
+
+    module = types.SimpleNamespace(get_password=get_password)
+    monkeypatch.setitem(sys.modules, "keyring", module)
+
+    provider = KeyringProvider("svc", "configured-entry")
+    provider.get_key()
+
+    assert calls == [("svc", "configured-entry")]
 
 
 def test_file_secret_blob_provider_uses_default_paths(workspace_dir: Path) -> None:

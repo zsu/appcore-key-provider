@@ -115,7 +115,6 @@ settings = SecretSourceSettings(
     provider="keyring",
     keyring=SecretKeyringSettings(
         service_name="customer_support_ops",
-        username="app_secrets",
         key_name="app-secrets",
     ),
 )

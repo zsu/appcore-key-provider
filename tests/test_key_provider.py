@@ -232,6 +232,30 @@ def test_keyring_secret_blob_provider_reads_keyring(
     assert provider.get_override_blob() is None
 
 
+def test_keyring_secret_blob_provider_uses_service_and_key_name(
+    monkeypatch: pytest.MonkeyPatch,
+    workspace_dir: Path,
+) -> None:
+    """Secret blob keyring provider reads using service_name and key_name only."""
+    calls: list[tuple[str, str]] = []
+
+    def get_password(service: str, key: str) -> str:
+        calls.append((service, key))
+        return "active-secret"
+
+    module = types.SimpleNamespace(get_password=get_password)
+    monkeypatch.setitem(sys.modules, "keyring", module)
+
+    provider = SecretBlobProviderFactory.create(
+        SecretSourceSettings(provider="keyring"),
+        environment="dev",
+        root_dir=workspace_dir,
+    )
+
+    assert provider.get_base_blob() == "active-secret"
+    assert calls == [("my_app", "app-secrets")]
+
+
 def test_azure_secret_blob_provider_reads_secret_names(
     monkeypatch: pytest.MonkeyPatch,
     workspace_dir: Path,

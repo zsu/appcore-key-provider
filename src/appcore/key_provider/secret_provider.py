@@ -80,12 +80,10 @@ class KeyringSecretBlobProvider:
     def __init__(
         self,
         service_name: str,
-        username: str,
         key_name: str,
     ) -> None:
         """Store keyring identifiers for blob loading."""
         self._service_name = service_name
-        self._username = username
         self._key_name = key_name
 
     def get_base_blob(self) -> str:
@@ -176,7 +174,6 @@ class SecretBlobProviderFactory:
         if settings.provider == "keyring":
             return KeyringSecretBlobProvider(
                 service_name=settings.keyring.service_name,
-                username=settings.keyring.username,
                 key_name=settings.keyring.key_name,
             )
 
